@@ -1,9 +1,9 @@
 import express from "express";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
-import fetch from "node-fetch";
 import cors from "cors";
 import multer from "multer";
+import { GoogleGenerativeAI } from "@google/generative-ai"; // Use the correct export name for your package
 
 dotenv.config();
 
@@ -18,91 +18,65 @@ app.use(
   })
 );
 
-// Validate environment variables
-const requiredEnvVars = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_DEPLOYMENT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_API_VERSION"];
-requiredEnvVars.forEach(v => {
-  if (!process.env[v]) throw new Error(`Missing env var: ${v}`);
+// Validate Gemini Environment Key
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("Missing env var: GEMINI_API_KEY");
+}
+
+// Initialize the Google Generative AI client correctly
+const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// ✅ Base Health Check Route
+app.get("/", (req, res) => {
+  res.json({
+    status: "healthy",
+    service: "Farmer Query Support System API (Powered by Google Gemini)",
+    endpoints: ["POST /chat", "POST /api/recognize"]
+  });
 });
 
 // ✅ Text chat route
+// ✅ Corrected Text chat route
 app.post("/chat", async (req, res) => {
   const { message } = req.body;
   if (!message?.trim()) return res.status(400).json({ reply: "Please type something to chat!" });
 
   try {
-    const response = await fetch(
-      `${process.env.AZURE_OPENAI_ENDPOINT}openai/deployments/${process.env.AZURE_OPENAI_DEPLOYMENT}/chat/completions?api-version=${process.env.AZURE_OPENAI_API_VERSION}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "api-key": process.env.AZURE_OPENAI_API_KEY,
-        },
-        body: JSON.stringify({
-          messages: [{ role: "user", content: message.trim() }],
-          max_tokens: 200,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      console.error("Azure API error:", response.status);
-      return res.status(500).json({ reply: "⚠️ AI service error. Try again later." });
-    }
-
-    const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content || "Sorry, I didn't get that.";
+    // Forcing the classic, globally supported text engine
+    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(message.trim());
+    const reply = result.response.text() || "Sorry, I didn't get that.";
+    
     res.json({ reply });
   } catch (err) {
-    console.error("Chat error:", err);
-    res.status(500).json({ reply: "⚠️ Connection error with AI service." });
+    console.error("Gemini Chat error:", err);
+    res.status(500).json({ reply: "⚠️ Connection error with Google Gemini service." });
   }
 });
 
-// ✅ Image recognition route
+// ✅ Corrected Image recognition route
 app.post("/api/recognize", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ result: "No image uploaded" });
 
-    const imageBase64 = req.file.buffer.toString("base64");
+    const imagePart = {
+      inlineData: {
+        data: req.file.buffer.toString("base64"),
+        mimeType: req.file.mimetype
+      },
+    };
 
-    const response = await fetch(
-      `${process.env.AZURE_OPENAI_ENDPOINT}openai/deployments/${process.env.AZURE_OPENAI_DEPLOYMENT}/chat/completions?api-version=${process.env.AZURE_OPENAI_API_VERSION}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "api-key": process.env.AZURE_OPENAI_API_KEY,
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: "Describe this image in detail for a farmer." },
-                {
-                  type: "image_url",
-                  image_url: { url: `data:image/jpeg;base64,${imageBase64}` },
-                },
-              ],
-            },
-          ],
-          max_tokens: 500,
-        }),
-      }
-    );
+    const prompt = "Describe this image in detail for a farmer.";
 
-    if (!response.ok) {
-      console.error("Azure Vision API error:", response.status);
-      return res.status(500).json({ result: "⚠️ AI image recognition error." });
-    }
+    // Forcing the classic vision engine
+    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent([prompt, imagePart]);
+    const responseText = result.response.text() || "Sorry, I couldn't analyze that image.";
 
-    const data = await response.json();
-    const result = data.choices?.[0]?.message?.content || "Sorry, I couldn't analyze that image.";
-    res.json({ result });
+    res.json({ result: responseText });
   } catch (err) {
-    console.error("Image recognition error:", err);
-    res.status(500).json({ result: "⚠️ Error processing image." });
+    console.error("Gemini Image recognition error:", err);
+    res.status(500).json({ result: "⚠️ Error processing image through Gemini Vision API." });
   }
 });
 
