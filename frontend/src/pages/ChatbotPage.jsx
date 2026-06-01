@@ -88,14 +88,14 @@ export function Chatbot({ messages, setMessages }) {
       if (selectedImage) {
         const formData = new FormData();
         formData.append("image", selectedImage);
-        const res = await fetch("http://localhost:5000/api/recognize", {
+        const res = await fetch("http://52.23.121.202:5000/api/recognize", {
           method: "POST",
           body: formData,
         });
         const data = await res.json();
         botReply = data.result;
       } else {
-        const res = await fetch("http://localhost:5000/chat", {
+        const res = await fetch("http://52.23.121.202:5000/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: inputMessage }),

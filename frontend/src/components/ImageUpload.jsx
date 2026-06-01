@@ -10,7 +10,7 @@ function ImageUpload() {
     const formData = new FormData();
     formData.append("image", file);
 
-    const res = await axios.post("http://localhost:5000/upload", formData);
+    const res = await axios.post("http://52.23.121.202:5000/upload", formData);
     setResult(JSON.stringify(res.data, null, 2));
   };
 
