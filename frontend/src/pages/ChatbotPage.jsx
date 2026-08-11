@@ -210,7 +210,7 @@ export function Chatbot({ messages, setMessages }) {
         formData.append("location", location);
 
         const res = await fetch(
-          "${API_URL}/api/recognize",
+          `${API_URL}/api/recognize`,
           {
             method: "POST",
             body: formData,
@@ -239,7 +239,7 @@ export function Chatbot({ messages, setMessages }) {
 
       else {
         const res = await fetch(
-          "${API_URL}/api/chat",
+          `${API_URL}/api/chat`,
           {
             method: "POST",
 
