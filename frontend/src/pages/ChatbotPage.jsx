@@ -19,6 +19,8 @@ export function Chatbot({ messages, setMessages }) {
   const recognitionRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
 
+  const API_URL = import.meta.env.VITE_API_URL;
+
   // ======================================================
   // Auto scroll
   // ======================================================
@@ -208,7 +210,7 @@ export function Chatbot({ messages, setMessages }) {
         formData.append("location", location);
 
         const res = await fetch(
-          "http://localhost:5000/api/recognize",
+          "${API_URL}/api/recognize",
           {
             method: "POST",
             body: formData,
@@ -237,7 +239,7 @@ export function Chatbot({ messages, setMessages }) {
 
       else {
         const res = await fetch(
-          "http://localhost:5000/api/chat",
+          "${API_URL}/api/chat",
           {
             method: "POST",
 
